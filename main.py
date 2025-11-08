@@ -55,11 +55,6 @@ def preprocess_text(text):
 st.title('🎬 IMDB Movie Review Sentiment Analysis')
 st.write('Enter a movie review to classify it as positive or negative.')
 
-with st.sidebar:
-    st.header('Model Status')
-    st.success('✅ Model loaded successfully')
-    st.info('🖥️ GPU: RTX 3050')
-
 # User input
 user_input = st.text_area('Movie Review')
 
@@ -87,4 +82,5 @@ if st.button('Classify'):
             st.warning('Neutral sentiment')
 else:
     st.write('Please enter a movie review.')
+
 
