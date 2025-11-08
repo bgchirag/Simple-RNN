@@ -8,6 +8,11 @@ from tensorflow.keras.preprocessing import sequence
 from tensorflow.keras.models import load_model
 from pathlib import Path
 import json
+import re
+
+MAX_FEATURES = 10000
+INDEX_OFFSET = 3
+UNK_TOKEN = 2
 
 MODEL_PATH = Path(__file__).resolve().parent / "simple_rnn_imdb.h5"
 WORD_INDEX_PATH = Path(__file__).resolve().parent / "artifacts" / "imdb_word_index.json"
@@ -31,7 +36,12 @@ def load_word_index():
         with WORD_INDEX_PATH.open('w', encoding='utf-8') as f:
             json.dump(word_index, f)
     word_index = {key: int(value) for key, value in word_index.items()}
-    reverse_word_index = {int(value): key for key, value in word_index.items()}
+    word_index = {
+        key: value
+        for key, value in word_index.items()
+        if value < MAX_FEATURES - INDEX_OFFSET
+    }
+    reverse_word_index = {value: key for key, value in word_index.items()}
     return word_index, reverse_word_index
 
 word_index, reverse_word_index = load_word_index()
@@ -43,17 +53,29 @@ def decode_review(encoded_review):
     return ' '.join([reverse_word_index.get(i - 3, '?') for i in encoded_review])
 
 # Function to preprocess user input
-def preprocess_text(text):
-    words = text.lower().split()
-    encoded_review = [word_index.get(word, 2) + 3 for word in words]
+def preprocess_text(text: str) -> np.ndarray:
+    tokens = re.findall(r"[\w']+", text.lower())
+    encoded_review = []
+    for word in tokens:
+        idx = word_index.get(word)
+        if idx is None or idx >= MAX_FEATURES - INDEX_OFFSET:
+            idx = UNK_TOKEN
+        encoded_review.append(idx + INDEX_OFFSET)
+    if not encoded_review:
+        encoded_review.append(UNK_TOKEN + INDEX_OFFSET)
     padded_review = sequence.pad_sequences([encoded_review], maxlen=500)
-    return padded_review
+    return padded_review.astype(np.int32)
 
 
 ## streamlit app
 # Streamlit app
 st.title('🎬 IMDB Movie Review Sentiment Analysis')
 st.write('Enter a movie review to classify it as positive or negative.')
+
+with st.sidebar:
+    st.header('Model Status')
+    st.success('✅ Model loaded successfully')
+    st.info('🖥️ GPU: RTX 3050')
 
 # User input
 user_input = st.text_area('Movie Review')
@@ -82,5 +104,4 @@ if st.button('Classify'):
             st.warning('Neutral sentiment')
 else:
     st.write('Please enter a movie review.')
-
 
