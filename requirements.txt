@@ -1,6 +1,6 @@
-tensorflow[and-cuda]==2.20.0
+tensorflow==2.20.0
 pandas==2.2.3
-numpy==1.26.4
+numpy==2.2.1
 scikit-learn==1.5.2
 tensorboard==2.20.0
 matplotlib==3.9.2
