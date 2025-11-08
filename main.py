@@ -6,18 +6,33 @@ import tensorflow as tf
 from tensorflow.keras.datasets import imdb
 from tensorflow.keras.preprocessing import sequence
 from tensorflow.keras.models import load_model
+from pathlib import Path
+import json
 
-@st.cache_resource
+MODEL_PATH = Path(__file__).resolve().parent / "simple_rnn_imdb.h5"
+WORD_INDEX_PATH = Path(__file__).resolve().parent / "artifacts" / "imdb_word_index.json"
+WORD_INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+@st.cache_resource(show_spinner=False)
 def load_model_cached():
     with st.spinner('Loading model...'):
-        return load_model('simple_rnn_imdb.h5')
+        model = load_model(MODEL_PATH)
+        model.predict(np.zeros((1, 500), dtype=np.int32), verbose=0)
+        return model
 
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def load_word_index():
-    with st.spinner('Loading word index...'):
-        word_index = imdb.get_word_index()
-        reverse_word_index = {value: key for key, value in word_index.items()}
-        return word_index, reverse_word_index
+    if WORD_INDEX_PATH.exists():
+        with WORD_INDEX_PATH.open('r', encoding='utf-8') as f:
+            word_index = json.load(f)
+    else:
+        with st.spinner('Downloading word index...'):
+            word_index = imdb.get_word_index()
+        with WORD_INDEX_PATH.open('w', encoding='utf-8') as f:
+            json.dump(word_index, f)
+    word_index = {key: int(value) for key, value in word_index.items()}
+    reverse_word_index = {int(value): key for key, value in word_index.items()}
+    return word_index, reverse_word_index
 
 word_index, reverse_word_index = load_word_index()
 model = load_model_cached()
